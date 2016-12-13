@@ -4,10 +4,10 @@
 
 int main() {
 
-	WINDOW *my_wins[3];
+    WINDOW *my_wins[3];
     PANEL  *my_panels[3];
 
-	initscr();
+    initscr();
     cbreak();
     noecho();
     keypad(stdscr, TRUE);
@@ -38,6 +38,11 @@ int main() {
     my_wins[2] = newwin(row - 4, col, 0, col - 40);
     wbkgdset(my_wins[2], COLOR_PAIR(3));
     wclear(my_wins[2]);
+
+    for (int i = 0; i < 3; ++i)
+        box(my_wins[i], 0, 0);
+    update_panels();
+    doupdate();
 
     for (int i = 0; i < 3; ++i)
         my_panels[i] = new_panel(my_wins[i]);
