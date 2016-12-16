@@ -1,6 +1,9 @@
 #include <ncurses.h>
 #include <panel.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <stdio.h>
 
 int main() {
 
@@ -27,6 +30,7 @@ int main() {
     if (col % 2 != 0) {
         col -= 1;
     }
+    
     my_wins[0] = newwin(row - 4, col - 40, 0, 0);
     wbkgdset(my_wins[0], COLOR_PAIR(1));
     wclear(my_wins[0]);
@@ -46,10 +50,27 @@ int main() {
 
     for (int i = 0; i < 3; ++i)
         my_panels[i] = new_panel(my_wins[i]);
+
+    pid_t pid;
+    pid_t test;
+
+    test = getpid();
+
+  	pid = fork();
+  	if (pid == 0) {
+	  	for (int i = 0; i < 5; ++i) {
+	  		mvwprintw(my_wins[2], 1, 1, "list process \n pid %d\n", test);
+	  	}
+	  	return 0;
+	}
+
+	for (int i = 0; i < 5; ++i) {
+		mvwprintw(my_wins[0], 1, 1, "window new pid\n");
+	}
     
-    mvwprintw(my_wins[0], 1, 1, "window chat message");
+    //mvwprintw(my_wins[0], 1, 1, "window chat message");
     mvwprintw(my_wins[1], 1, 1, "window new message");
-    mvwprintw(my_wins[2], 1, 1, "list process");
+    //mvwprintw(my_wins[2], 1, 1, "list process \n pid %d", pid);
 
     update_panels();
     doupdate();
