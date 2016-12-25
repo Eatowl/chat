@@ -8,7 +8,9 @@
 #include <stdbool.h>
 #include <linux/ipc.h>
 #include <linux/msg.h>
+#include <pthread.h>
 #define MAX_SEND_SIZE 80
+#define MAX_USER 100
 
 typedef struct mymsgbuf
 {
@@ -18,20 +20,34 @@ typedef struct mymsgbuf
   char mess[MAX_SEND_SIZE];
 } mess_t;
 
+struct thread_arg {
+    int qid;
+    mess_t received;
+    int length;
+    int type_proc;
+};
+
 void create_interface(WINDOW **my_wins, PANEL  **my_panels);
+
+void create_new_proc(int qid, mess_t received, int length, int left_proc);
+
+void *thread_test(void * arg) {
+	struct thread_arg targ = *(struct thread_arg *) arg;
+
+	msgrcv(targ.qid, &targ.received, targ.length, targ.type_proc, 0);
+	printf("%d %s", targ.received.name, targ.received.mess);
+}
 
 int main() {
 	WINDOW *my_wins[3];
     PANEL  *my_panels[3];
-
 	//create_interface(my_wins, my_panels);
-	int qid;
 	char message[MAX_SEND_SIZE];
   	mess_t sent;
   	mess_t received;
   	key_t msgkey;
+  	int qid;
   	msgkey = ftok(".",'m');
-
   	qid = msgget(msgkey, IPC_CREAT | 0660);
 
 	FILE *file;
@@ -41,10 +57,16 @@ int main() {
 
   	int length;
   	length = sizeof(mess_t) - sizeof(long);
-  
   	sent.mtype = 1;
   	sent.int_num = 0;
   	sent.name = getpid();
+
+  	pthread_t thread;
+    int result;
+    struct thread_arg targ;
+    targ.qid = qid;
+    targ.length = length;
+    targ.type_proc = 2;
 
   	bool exit = false;
   	pid_t pid;
@@ -62,14 +84,30 @@ int main() {
 	        exit = true;
 		}
     return 0;
-  }
+    }
 
+  pid_t new_pid;
   while (exit != true) {
-    msgrcv(qid, &received, length, 2, 0);
-    printf("%d %s", received.name, received.mess);
+  	//msgrcv(qid, &received, length, 2, 0);
+	//printf("%d %s", received.name, received.mess);
+	//msgrcv(qid, &received, length, 3, 0);
+	//printf("%d %s", received.name, received.mess);
+  	//for (int i = 2; i < 4; ++i) {
+  		/*if (!(pid = fork())) {
+		    msgrcv(qid, &received, length, 2, 0);
+			printf("%d %s", received.name, received.mess);
+		    return 0;
+	    }
+	    msgrcv(qid, &received, length, 3, 0);
+		printf("%d %s", received.name, received.mess);*/
+	//}
     //mvwprintw(my_wins[0], 1, 1, "%s", received.mess);
     //update_panels();
     //doupdate();
+
+    //result = pthread_create(&thread, NULL, &thread_test, &targ);
+	create_new_proc(qid, received, length, 5);
+
   }
     
     return 0;
@@ -118,4 +156,17 @@ void create_interface(WINDOW **my_wins, PANEL  **my_panels) {
 
     update_panels();
     doupdate();
+}
+
+void create_new_proc(int qid, mess_t received, int length, int left_proc) {
+	for (int i = 2; i < left_proc; i+=2) {
+		pid_t new_pid;
+		if (!(new_pid = fork())) {
+		    msgrcv(qid, &received, length, i, 0);
+			printf("%d %s", received.name, received.mess);
+		    return 0;
+		}
+		msgrcv(qid, &received, length, i + 1, 0);
+		printf("%d %s", received.name, received.mess);
+	}
 }
