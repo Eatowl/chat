@@ -15,6 +15,8 @@ typedef struct mymsgbuf
   char mess[MAX_SEND_SIZE];
 } mess_t;
 
+void create_new_proc(int qid, mess_t received, int length, int left_proc);
+
 int main()
 {
   int qid;
@@ -26,16 +28,29 @@ int main()
   mess_t received;
 
   int length;
+  int n[1], i = 0;
   FILE *file = fopen("QID.txt","r");
-  fscanf(file, "%d", &qid);
+  while( !feof(file) ) {
+    fscanf( file, "%d", &n[i] );
+    //printf("rez scan %d\n", n[i]);
+    i++;
+  }
   fclose(file);
+  FILE *file1 = fopen("QID.txt","w");
+  fprintf(file1, "%d\n", n[0]);
+  fprintf(file1, "%d\n", (n[1] + 1));
+  fclose(file1);
+
+  printf("qid %d\n", n[0]);
 
   length = sizeof(mess_t) - sizeof(long);
   msgkey = ftok(".",'m');
 
-  sent.mtype = 2;
+  sent.mtype = n[1];
   sent.int_num = 0;
   sent.name = getpid();
+
+  printf("my type message %d\n", sent.mtype);
 
   bool exit = false;
 
@@ -56,8 +71,22 @@ int main()
   }
 
   while (exit != true) {
-    msgrcv(qid, &received, length, 1, 0);
-    printf("%d %s", received.name, received.mess);
+    //msgrcv(qid, &received, length, 1, 0);
+    //printf("%d %s", received.name, received.mess);
+    create_new_proc(qid, received, length, 5);
   }
 
+}
+
+void create_new_proc(int qid, mess_t received, int length, int left_proc) {
+  for (int i = 2; i < left_proc; i+=2) {
+    pid_t new_pid;
+    if (!(new_pid = fork())) {
+        msgrcv(qid, &received, length, i, 0);
+      printf("%d %s", received.name, received.mess);
+        return 0;
+    }
+    msgrcv(qid, &received, length, i + 1, 0);
+    printf("%d %s", received.name, received.mess);
+  }
 }
