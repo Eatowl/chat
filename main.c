@@ -23,44 +23,42 @@ typedef struct mymsgbuf
 void create_new_proc(int qid, mess_t received, int length, int left_proc);
 
 int main() {
-	char message[MAX_SEND_SIZE];
-  	mess_t sent;
-  	mess_t received;
-  	key_t msgkey;
-  	int qid;
-  	msgkey = ftok(".",'m');
-  	qid = msgget(msgkey, IPC_CREAT | 0660);
+  char message[MAX_SEND_SIZE];
+  mess_t sent;
+  mess_t received;
+  key_t msgkey;
+  int qid;
+  msgkey = ftok(".",'m');
+  qid = msgget(msgkey, IPC_CREAT | 0660);
 
-  	FILE *file;
-	file = fopen("QID.txt","w");
-	fprintf(file, "%d\n", qid);
-	fprintf(file, "%d\n", 2);   
-	fclose(file);
+  FILE *file;
+  file = fopen("QID.txt","w");
+  fprintf(file, "%d\n", qid);
+  fprintf(file, "%d\n", 2);   
+  fclose(file);
 
-  	int length;
-  	length = sizeof(mess_t) - sizeof(long);
-  	sent.mtype = 2;
-  	sent.int_num = 0;
-  	sent.name = getpid();
+  int length;
+  length = sizeof(mess_t) - sizeof(long);
+  sent.mtype = 2;
+  sent.int_num = 0;
+  sent.name = getpid();
 
-  	bool exit = false;
-  	pid_t pid;
-
-  	if (!(pid = fork())) {
-		while (exit != true) {      	
-	      fflush(stdin);
-	      fgets(message, MAX_SEND_SIZE, stdin);
-	      strcpy(sent.mess, message);
-	      for (int i = 3; i < MAX_USER; ++i) {
-	          msgsnd(qid, &sent, length, 0);
-	          sent.mtype = i;
-	      }
-	      if (strcmp(message, "exit") == 0)
-	        exit = true;
-		}
+  bool exit = false;
+  pid_t pid;
+  if (!(pid = fork())) {
+	while (exit != true) {      	
+	  fflush(stdin);
+	  fgets(message, MAX_SEND_SIZE, stdin);
+	  strcpy(sent.mess, message);
+	    for (int i = 3; i < MAX_USER; ++i) {
+	      msgsnd(qid, &sent, length, 0);
+	      sent.mtype = i;
+	    }
+	  if (strcmp(message, "exit") == 0)
+	    exit = true;
+	}
     return 0;
-    }
-
+  }
   pid_t new_pid;
   int count_exit = 0;
   while (exit != true) {
@@ -73,22 +71,7 @@ int main() {
     	msgctl(qid, IPC_RMID, 0);
     	exit = true;
     }
-	//create_new_proc(qid, received, length, 5);
-
   }
   //msgctl(qid, IPC_RMID, 0);
   return 0;
-}
-
-void create_new_proc(int qid, mess_t received, int length, int left_proc) {
-	for (int i = 2; i < left_proc; i+=2) {
-		pid_t new_pid;
-		if (!(new_pid = fork())) {
-		    msgrcv(qid, &received, length, i, 0);
-			printf("%d %s", received.name, received.mess);
-		    return 0;
-		}
-		msgrcv(qid, &received, length, i + 1, 0);
-		printf("%d %s", received.name, received.mess);
-	}
 }
