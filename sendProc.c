@@ -5,6 +5,7 @@
 #include <linux/ipc.h>
 #include <linux/msg.h>
 #define MAX_SEND_SIZE 80
+#define MAX_USER 10
 
 /* Redefines the struct msgbuf */
 typedef struct mymsgbuf
@@ -15,7 +16,7 @@ typedef struct mymsgbuf
   char mess[MAX_SEND_SIZE];
 } mess_t;
 
-void create_new_proc(int qid, mess_t received, int length, int left_proc);
+void create_new_proc(int qid, mess_t received, int length, int left_proc, int n);
 
 int main()
 {
@@ -41,8 +42,6 @@ int main()
   fprintf(file1, "%d\n", (n[1] + 1));
   fclose(file1);
 
-  printf("qid %d\n", n[0]);
-
   length = sizeof(mess_t) - sizeof(long);
   msgkey = ftok(".",'m');
 
@@ -61,7 +60,12 @@ int main()
       //scanw("%s", &message);
       //getstr(message);
       strcpy(sent.mess, message);
-      msgsnd(qid, &sent, length, 0);
+      for (int i = 1; i < MAX_USER; ++i) {
+        if (i != n[1]) {
+          msgsnd(qid, &sent, length, 0);
+          sent.mtype = i;
+        }
+      }
       sent.int_num++;
       if (strcmp(message, "exit") == 0)
         exit = true;
@@ -71,22 +75,27 @@ int main()
   }
 
   while (exit != true) {
-    //msgrcv(qid, &received, length, 1, 0);
-    //printf("%d %s", received.name, received.mess);
-    create_new_proc(qid, received, length, 5);
+    msgrcv(qid, &received, length, n[1], 0);
+    printf("%d %s", received.name, received.mess);
+    if (strcmp(received.mess, "stop") == 0) {
+      printf("!!!!!!!!!!");
+    }
+    //create_new_proc(qid, received, length, 5, n[i]);
   }
 
 }
 
-void create_new_proc(int qid, mess_t received, int length, int left_proc) {
-  for (int i = 2; i < left_proc; i+=2) {
+void create_new_proc(int qid, mess_t received, int length, int left_proc, int n) {
+  for (int i = 1; i < left_proc; i+=2) {
     pid_t new_pid;
-    if (!(new_pid = fork())) {
+    if (!(new_pid = fork()) && i != n) {
         msgrcv(qid, &received, length, i, 0);
       printf("%d %s", received.name, received.mess);
         return 0;
     }
-    msgrcv(qid, &received, length, i + 1, 0);
-    printf("%d %s", received.name, received.mess);
+    if ( n + 1 != i) {
+      msgrcv(qid, &received, length, i + 1, 0);
+      printf("%d %s", received.name, received.mess);
+    }
   }
 }
