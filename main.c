@@ -12,15 +12,12 @@
 #define MAX_SEND_SIZE 80
 #define MAX_USER 10
 
-typedef struct mymsgbuf
-{
+typedef struct mymsgbuf {
   long mtype;
   int int_num;
   int name;
   char mess[MAX_SEND_SIZE];
 } mess_t;
-
-void create_new_proc(int qid, mess_t received, int length, int left_proc);
 
 int main() {
   char message[MAX_SEND_SIZE];
